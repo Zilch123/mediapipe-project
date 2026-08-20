@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Air Violin</title>
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <h1><a class="back" href="../../">←</a> Air Violin</h1>
+    <p class="subtitle">
+      Left hand picks the note. Right hand is the bow — sound only while it
+      moves.
+    </p>
+
+    <div id="stage">
+      <video id="webcam" autoplay playsinline muted></video>
+      <canvas id="output"></canvas>
+    </div>
+
+    <div id="readout">
+      <div class="panel">
+        <span class="label">Note</span>
+        <span id="note" class="big">—</span>
+      </div>
+      <div class="panel">
+        <span class="label">Bow</span>
+        <div id="bow-meter"><div id="bow-level"></div></div>
+      </div>
+      <div class="panel">
+        <span class="label">Hands</span>
+        <span id="hands">left ✗ right ✗</span>
+      </div>
+    </div>
+
+    <div id="controls">
+      <button id="toggle" disabled>Loading model…</button>
+      <button id="swap" class="secondary">Swap hands</button>
+      <button id="help-toggle" class="secondary">How to enable camera</button>
+      <span id="status">loading…</span>
+    </div>
+
+    <div id="help" hidden>
+      <p>
+        A web page can't open browser settings for you, so the camera
+        permission has to be changed by hand:
+      </p>
+      <ul>
+        <li>
+          <strong>Chrome / Edge:</strong> click the camera or tune icon at the
+          right of the address bar → allow camera → reload the page.
+        </li>
+        <li>
+          <strong>Firefox:</strong> click the camera icon left of the address
+          bar → remove the "Blocked" setting → reload.
+        </li>
+        <li>
+          <strong>Safari:</strong> Safari → Settings for This Website → set
+          Camera to Allow.
+        </li>
+      </ul>
+      <p>
+        The camera also only works on <code>http://localhost</code> or HTTPS —
+        not on a <code>file://</code> URL.
+      </p>
+    </div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

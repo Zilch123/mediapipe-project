@@ -11,19 +11,24 @@ Serve the folder over HTTP (the webcam and ES modules need a real origin):
 python -m http.server 8000
 ```
 
-Then open http://localhost:8000 and click **Start camera**.
+Then open http://localhost:8000, pick a project, and click **Start camera**.
 
 ## Files
 
-- [index.html](index.html) — markup: video, overlay canvas, controls.
-- [style.css](style.css) — layout for the mirrored video/canvas stage.
+- [index.html](index.html) — the project picker.
 - [handTracker.js](handTracker.js) — the reusable part. Loads the model, owns
   the webcam and the detection loop, calls `onResults` per frame.
-- [app.js](app.js) — the demo: draws landmarks and counts hands.
+- [style.css](style.css) — shared styles, including the mirrored video stage.
+- [apps/hand-detection/](apps/hand-detection/) — landmark overlay and hand count.
+- [apps/violin/](apps/violin/) — air violin: left hand picks the note by
+  height, right hand is the bow and only sounds while it moves.
 
 ## Building a new app on this
 
-Keep `handTracker.js`, replace `handleResults` in `app.js`:
+Add `apps/<name>/index.html` and `apps/<name>/app.js`, link them from the root
+picker, and reference the shared files as `../../handTracker.js` and
+`../../style.css`. In `app.js`, keep `handTracker.js` as-is and write your own
+`onResults`:
 
 ```js
 const tracker = new HandTracker(video, { numHands: 1 });

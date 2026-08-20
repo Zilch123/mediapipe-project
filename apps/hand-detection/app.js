@@ -6,7 +6,7 @@
  * `result.handedness` for every detected hand.
  */
 
-import { HandTracker, HandLandmarker, DrawingUtils } from './handTracker.js';
+import { HandTracker, HandLandmarker, DrawingUtils } from '../../handTracker.js';
 
 const video = document.getElementById('webcam');
 const canvas = document.getElementById('output');

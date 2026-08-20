@@ -9,7 +9,9 @@ this project is a sample project to learn how to vibe code.
 4. Reuse handTracker.js code, per-app logic goes app.js 
 
 # New apps
-This repo is the boilerplate. To build a new app, copy the whole folder and edit the copy — don't add app variants or per-app branches here. Keep this repo as the clean starting point.
+Each app lives in its own folder under apps/, with its own index.html and app.js.
+Shared code stays at the root: handTracker.js and style.css. Apps reference them as ../../handTracker.js and ../../style.css.
+The root index.html is the project picker — add a button there for every new app.
 
 # Mirroring
 style.css flips both #webcam and #output with `transform: scaleX(-1)`.

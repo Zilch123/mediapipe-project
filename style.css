@@ -20,6 +20,92 @@ h1 {
   font-weight: 600;
 }
 
+.subtitle {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 14px;
+  text-align: center;
+}
+
+a.back {
+  color: #9ca3af;
+  text-decoration: none;
+}
+
+/* Project picker (root index.html) */
+#projects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  width: min(100%, 720px);
+}
+
+.project {
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 8px;
+  background: #1f2937;
+  color: inherit;
+  text-decoration: none;
+}
+
+.project:hover {
+  background: #374151;
+}
+
+.project span {
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* Violin readout */
+#readout {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.panel .label {
+  color: #9ca3af;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.panel .big {
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+}
+
+#bow-meter {
+  width: 160px;
+  height: 10px;
+  border-radius: 5px;
+  background: #1f2937;
+  overflow: hidden;
+}
+
+#bow-level {
+  width: 0%;
+  height: 100%;
+  background: #f97316;
+  transition: width 60ms linear;
+}
+
 #stage {
   position: relative;
   width: min(100%, 720px);
