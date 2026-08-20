@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hand Detection</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Hand Detection</h1>
+
+    <div id="stage">
+      <video id="webcam" autoplay playsinline muted></video>
+      <canvas id="output"></canvas>
+    </div>
+
+    <div id="controls">
+      <button id="toggle" disabled>Loading model…</button>
+      <label>
+        Hands
+        <input id="num-hands" type="range" min="1" max="4" step="1" value="2" />
+        <span id="num-hands-value">2</span>
+      </label>
+      <span id="status">0 hands</span>
+    </div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
