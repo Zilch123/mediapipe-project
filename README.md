@@ -20,8 +20,8 @@ Then open http://localhost:8000, pick a project, and click **Start camera**.
   the webcam and the detection loop, calls `onResults` per frame.
 - [style.css](style.css) — shared styles, including the mirrored video stage.
 - [apps/hand-detection/](apps/hand-detection/) — landmark overlay and hand count.
-- [apps/violin/](apps/violin/) — air violin: left hand picks the note by
-  height, right hand is the bow and only sounds while it moves.
+- [apps/violin/](apps/violin/) — air violin: moving the right hand steps
+  through the "He's a Pirate" melody. The left hand is drawn but unused.
 
 ## Building a new app on this
 

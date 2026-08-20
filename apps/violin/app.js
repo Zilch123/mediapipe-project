@@ -1,29 +1,48 @@
 /**
- * Air Violin.
+ * Air Violin — Pirates of the Caribbean.
  *
- * Left hand = the string hand: its height picks the note.
- * Right hand = the bow: sound is produced only while it is moving, and how
- * fast it moves sets the volume. Hold the bow hand still and the note stops.
+ * Right hand = the bow. Any movement at all steps the melody forward one
+ * note; stop moving and the melody waits. The left hand is drawn so you can
+ * see it, but it does not affect the sound.
+ *
+ * This is a demo of building apps with an agent, not an accurate violin: the
+ * melody is a simplified take on "He's a Pirate".
  */
 
 import { HandTracker, HandLandmarker, DrawingUtils } from '../../handTracker.js';
 
-// G major, low to high — the note the left hand picks by height.
-const NOTES = [
-  { name: 'G3', freq: 196.0 },
-  { name: 'A3', freq: 220.0 },
-  { name: 'B3', freq: 246.94 },
-  { name: 'C4', freq: 261.63 },
-  { name: 'D4', freq: 293.66 },
-  { name: 'E4', freq: 329.63 },
-  { name: 'F#4', freq: 369.99 },
-  { name: 'G4', freq: 392.0 },
+const HZ = {
+  D4: 293.66,
+  F4: 349.23,
+  G4: 392.0,
+  A4: 440.0,
+  Bb4: 466.16,
+  C5: 523.25,
+  D5: 587.33,
+};
+
+// "He's a Pirate", simplified. dur is in beats.
+const BEAT = 0.19; // seconds per beat
+const MELODY = [
+  ['D4', 1], ['F4', 1], ['G4', 2],
+  ['A4', 1], ['A4', 1], ['A4', 2],
+  ['Bb4', 1], ['C5', 1], ['C5', 2],
+  ['C5', 1], ['C5', 1], ['C5', 2],
+  ['D5', 1], ['C5', 1], ['Bb4', 2],
+  ['A4', 1], ['G4', 1], ['A4', 3],
+
+  ['D4', 1], ['F4', 1], ['G4', 2],
+  ['A4', 1], ['A4', 1], ['A4', 2],
+  ['Bb4', 1], ['C5', 1], ['C5', 2],
+  ['C5', 1], ['C5', 1], ['C5', 2],
+  ['D5', 1], ['C5', 1], ['Bb4', 2],
+  ['A4', 1], ['G4', 1], ['F4', 3],
 ];
 
-// Bow speed is in normalized screen widths per second.
-const BOW_THRESHOLD = 0.12; // below this the bow counts as still
-const BOW_FULL = 1.4; // speed that reaches full volume
-const MAX_GAIN = 0.25;
+// Deliberately low: any real movement counts, no bowing technique required.
+const MOVE_THRESHOLD = 0.04; // normalized screen widths per second
+const RESET_AFTER = 2500; // ms of stillness before the melody starts over
+const MAX_GAIN = 0.22;
 
 const video = document.getElementById('webcam');
 const canvas = document.getElementById('output');
@@ -44,60 +63,50 @@ const tracker = new HandTracker(video, { numHands: 2 });
 // receives the raw (unmirrored) camera frame — so its "Right" is the user's
 // left hand. The Swap hands button flips this if it comes out backwards.
 let swapped = false;
-const isStringHand = (label) => (swapped ? label === 'Left' : label === 'Right');
+const isBowHand = (label) => (swapped ? label === 'Right' : label === 'Left');
 
-let noteIndex = 3;
+let melodyIndex = 0;
+let nextNoteAt = 0;
+let lastMovedAt = 0;
 let bowSpeed = 0;
 let lastBow = null;
 let lastBowTime = 0;
 
 // --- audio ---------------------------------------------------------------
 
-let audio = null;
+let audioCtx = null;
 
 function startAudio() {
-  if (audio) return;
-  const ctxAudio = new AudioContext();
-
-  const osc = ctxAudio.createOscillator();
-  osc.type = 'sawtooth';
-  osc.frequency.value = NOTES[noteIndex].freq;
-
-  // A lowpass takes the buzz off the sawtooth so it reads as bowed string.
-  const filter = ctxAudio.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.value = 2200;
-  filter.Q.value = 1;
-
-  const gain = ctxAudio.createGain();
-  gain.gain.value = 0;
-
-  // Slight vibrato.
-  const lfo = ctxAudio.createOscillator();
-  lfo.frequency.value = 5.5;
-  const lfoDepth = ctxAudio.createGain();
-  lfoDepth.gain.value = 1.5;
-  lfo.connect(lfoDepth).connect(osc.detune);
-
-  osc.connect(filter).connect(gain).connect(ctxAudio.destination);
-  osc.start();
-  lfo.start();
-
-  audio = { ctx: ctxAudio, osc, gain };
-}
-
-function updateAudio(volume) {
-  if (!audio) return;
-  const now = audio.ctx.currentTime;
-  // setTargetAtTime ramps instead of jumping, which avoids clicks.
-  audio.gain.gain.setTargetAtTime(volume * MAX_GAIN, now, 0.05);
-  audio.osc.frequency.setTargetAtTime(NOTES[noteIndex].freq, now, 0.04);
+  audioCtx ??= new AudioContext();
 }
 
 function stopAudio() {
-  if (!audio) return;
-  audio.ctx.close();
-  audio = null;
+  audioCtx?.close();
+  audioCtx = null;
+}
+
+/** One bowed note with its own envelope, so notes are distinct. */
+function playNote(freq, seconds) {
+  const t = audioCtx.currentTime;
+
+  const osc = audioCtx.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.value = freq;
+
+  // A lowpass takes the buzz off the sawtooth so it reads as bowed string.
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 2400;
+  filter.Q.value = 1;
+
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(MAX_GAIN, t + 0.03);
+  gain.gain.setTargetAtTime(0, t + seconds * 0.75, 0.09);
+
+  osc.connect(filter).connect(gain).connect(audioCtx.destination);
+  osc.start(t);
+  osc.stop(t + seconds + 0.5);
 }
 
 // --- detection -----------------------------------------------------------
@@ -105,29 +114,21 @@ function stopAudio() {
 function handleResults(result) {
   const now = performance.now();
 
-  let stringHand = null;
   let bowHand = null;
+  let otherHand = null;
   result.landmarks.forEach((landmarks, i) => {
     const label = result.handedness[i][0].categoryName;
-    if (isStringHand(label)) stringHand = landmarks;
-    else bowHand = landmarks;
+    if (isBowHand(label)) bowHand = landmarks;
+    else otherHand = landmarks;
   });
 
-  // Left hand height picks the note: top of frame is the highest note.
-  if (stringHand) {
-    const y = stringHand[0].y;
-    const index = Math.floor((1 - y) * NOTES.length);
-    noteIndex = Math.min(NOTES.length - 1, Math.max(0, index));
-  }
-
-  // Right hand movement drives the volume.
   if (bowHand) {
     const wrist = bowHand[0];
     if (lastBow) {
       const dt = (now - lastBowTime) / 1000;
       if (dt > 0) {
         const moved = Math.hypot(wrist.x - lastBow.x, wrist.y - lastBow.y);
-        // Smooth so a single jittery frame doesn't spike the volume.
+        // Smooth so a single jittery frame doesn't count as movement.
         bowSpeed = bowSpeed * 0.6 + (moved / dt) * 0.4;
       }
     }
@@ -138,44 +139,51 @@ function handleResults(result) {
     bowSpeed = 0;
   }
 
-  const volume = stringHand
-    ? Math.min(1, Math.max(0, (bowSpeed - BOW_THRESHOLD) / BOW_FULL))
-    : 0;
+  const moving = bowSpeed > MOVE_THRESHOLD;
 
-  updateAudio(volume);
-  draw(stringHand, bowHand, volume);
+  // Long pause: start the tune again from the top.
+  if (!moving && lastMovedAt && now - lastMovedAt > RESET_AFTER) {
+    melodyIndex = 0;
+    lastMovedAt = 0;
+    noteLabel.textContent = '—';
+  }
 
-  noteLabel.textContent = volume > 0 ? NOTES[noteIndex].name : '—';
-  bowLevel.style.width = `${Math.round(volume * 100)}%`;
-  handsLabel.textContent = `left ${stringHand ? '✓' : '✗'} right ${bowHand ? '✓' : '✗'}`;
+  if (moving && audioCtx) {
+    lastMovedAt = now;
+    if (now >= nextNoteAt) {
+      const [name, beats] = MELODY[melodyIndex];
+      const seconds = beats * BEAT;
+      playNote(HZ[name], seconds);
+      nextNoteAt = now + seconds * 1000;
+      melodyIndex = (melodyIndex + 1) % MELODY.length;
+      noteLabel.textContent = name;
+    }
+  }
+
+  draw(bowHand, otherHand, moving);
+
+  bowLevel.style.width = `${Math.round(Math.min(1, bowSpeed / 0.8) * 100)}%`;
+  handsLabel.textContent = `bow ${bowHand ? '✓' : '✗'} other ${otherHand ? '✓' : '✗'}`;
 }
 
-function draw(stringHand, bowHand, volume) {
+function draw(bowHand, otherHand, moving) {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Note bands. No text on the canvas — it is mirrored, so text reads
-  // backwards; the note name goes in the DOM readout instead.
-  const band = canvas.height / NOTES.length;
-  for (let i = 0; i < NOTES.length; i++) {
-    const y = canvas.height - (i + 1) * band;
-    ctx.fillStyle =
-      i === noteIndex ? `rgba(59,130,246,${0.15 + volume * 0.35})` : 'rgba(255,255,255,0.04)';
-    ctx.fillRect(0, y, canvas.width, band - 2);
-  }
-
-  if (stringHand) {
-    drawingUtils.drawConnectors(stringHand, HandLandmarker.HAND_CONNECTIONS, {
+  // No text on the canvas — it is mirrored, so text reads backwards. The note
+  // name goes in the DOM readout instead.
+  if (otherHand) {
+    drawingUtils.drawConnectors(otherHand, HandLandmarker.HAND_CONNECTIONS, {
       color: '#22c55e',
       lineWidth: 4,
     });
-    drawingUtils.drawLandmarks(stringHand, { color: '#bbf7d0', lineWidth: 1 });
+    drawingUtils.drawLandmarks(otherHand, { color: '#bbf7d0', lineWidth: 1 });
   }
 
   if (bowHand) {
     drawingUtils.drawConnectors(bowHand, HandLandmarker.HAND_CONNECTIONS, {
-      color: volume > 0 ? '#f97316' : '#78716c',
+      color: moving ? '#f97316' : '#78716c',
       lineWidth: 4,
     });
     drawingUtils.drawLandmarks(bowHand, { color: '#fed7aa', lineWidth: 1 });
@@ -193,6 +201,7 @@ toggleButton.addEventListener('click', async () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     bowLevel.style.width = '0%';
     noteLabel.textContent = '—';
+    melodyIndex = 0;
     status.textContent = 'stopped';
     toggleButton.textContent = 'Start camera';
     return;
@@ -206,7 +215,7 @@ toggleButton.addEventListener('click', async () => {
     // here rather than on page load.
     startAudio();
     toggleButton.textContent = 'Stop camera';
-    status.textContent = 'playing';
+    status.textContent = 'move your bow hand';
     help.hidden = true;
   } catch (error) {
     if (error.name === 'NotAllowedError') {
@@ -222,7 +231,7 @@ toggleButton.addEventListener('click', async () => {
 
 swapButton.addEventListener('click', () => {
   swapped = !swapped;
-  status.textContent = swapped ? 'hands swapped' : 'hands normal';
+  status.textContent = swapped ? 'bow hand swapped' : 'bow hand normal';
 });
 
 helpToggle.addEventListener('click', () => {
