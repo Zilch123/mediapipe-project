@@ -12,7 +12,9 @@
 import { HandTracker, HandLandmarker, DrawingUtils } from '../../handTracker.js';
 
 const HZ = {
+  C4: 261.63,
   D4: 293.66,
+  E4: 329.63,
   F4: 349.23,
   G4: 392.0,
   A4: 440.0,
@@ -21,22 +23,30 @@ const HZ = {
   D5: 587.33,
 };
 
-// "He's a Pirate", simplified. dur is in beats.
-const BEAT = 0.19; // seconds per beat
+// "He's a Pirate" — the main theme, simplified. dur is in beats.
+// Part A is the low opening figure everyone knows; part B is the rising
+// answer to it, an octave-ish up.
+const BEAT = 0.17; // seconds per beat
 const MELODY = [
-  ['D4', 1], ['F4', 1], ['G4', 2],
-  ['A4', 1], ['A4', 1], ['A4', 2],
-  ['Bb4', 1], ['C5', 1], ['C5', 2],
-  ['C5', 1], ['C5', 1], ['C5', 2],
-  ['D5', 1], ['C5', 1], ['Bb4', 2],
-  ['A4', 1], ['G4', 1], ['A4', 3],
+  // Part A
+  ['D4', 1], ['D4', 1], ['D4', 1],
+  ['D4', 1], ['E4', 1], ['F4', 1],
+  ['F4', 1], ['F4', 1], ['F4', 1],
+  ['F4', 1], ['G4', 1], ['E4', 1],
+  ['E4', 1], ['E4', 1], ['E4', 1],
+  ['E4', 1], ['F4', 1], ['D4', 1],
+  ['D4', 1], ['C4', 1], ['D4', 1],
+  ['D4', 3],
 
-  ['D4', 1], ['F4', 1], ['G4', 2],
-  ['A4', 1], ['A4', 1], ['A4', 2],
-  ['Bb4', 1], ['C5', 1], ['C5', 2],
-  ['C5', 1], ['C5', 1], ['C5', 2],
-  ['D5', 1], ['C5', 1], ['Bb4', 2],
-  ['A4', 1], ['G4', 1], ['F4', 3],
+  // Part B
+  ['A4', 1], ['A4', 1], ['A4', 1],
+  ['A4', 1], ['Bb4', 1], ['C5', 1],
+  ['C5', 1], ['C5', 1], ['C5', 1],
+  ['C5', 1], ['D5', 1], ['Bb4', 1],
+  ['Bb4', 1], ['Bb4', 1], ['Bb4', 1],
+  ['Bb4', 1], ['C5', 1], ['A4', 1],
+  ['A4', 1], ['G4', 1], ['A4', 1],
+  ['A4', 3],
 ];
 
 // Deliberately low: any real movement counts, no bowing technique required.
