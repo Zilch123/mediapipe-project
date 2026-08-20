@@ -22,6 +22,8 @@ Then open http://localhost:8000, pick a project, and click **Start camera**.
 - [apps/hand-detection/](apps/hand-detection/) — landmark overlay and hand count.
 - [apps/violin/](apps/violin/) — air violin: moving the right hand steps
   through the "He's a Pirate" melody. The left hand is drawn but unused.
+- [apps/theremin/](apps/theremin/) — free-play theremin: right hand slides the
+  pitch, left hand rides the volume, tone sustains continuously.
 
 ## Building a new app on this
 
