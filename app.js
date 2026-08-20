@@ -15,6 +15,8 @@ const toggleButton = document.getElementById('toggle');
 const numHandsInput = document.getElementById('num-hands');
 const numHandsValue = document.getElementById('num-hands-value');
 const status = document.getElementById('status');
+const helpToggle = document.getElementById('help-toggle');
+const help = document.getElementById('help');
 
 const drawingUtils = new DrawingUtils(ctx);
 const tracker = new HandTracker(video);
@@ -47,14 +49,27 @@ toggleButton.addEventListener('click', async () => {
   }
 
   toggleButton.disabled = true;
+  status.textContent = 'requesting camera…';
   try {
     await tracker.start();
     toggleButton.textContent = 'Stop camera';
+    help.hidden = true;
   } catch (error) {
-    status.textContent = `Camera error: ${error.message}`;
+    // Permission denied is the common case: the browser won't prompt again,
+    // so point the user at the setting instead of just showing an error.
+    if (error.name === 'NotAllowedError') {
+      status.textContent = 'camera blocked — see instructions below';
+      help.hidden = false;
+    } else {
+      status.textContent = `camera error: ${error.message}`;
+    }
   } finally {
     toggleButton.disabled = false;
   }
+});
+
+helpToggle.addEventListener('click', () => {
+  help.hidden = !help.hidden;
 });
 
 numHandsInput.addEventListener('input', async () => {
@@ -63,7 +78,14 @@ numHandsInput.addEventListener('input', async () => {
   await tracker.setOptions({ numHands });
 });
 
-await tracker.initialize();
-toggleButton.disabled = false;
-toggleButton.textContent = 'Start camera';
-status.textContent = 'ready';
+// Report load failures on the page — otherwise the button sits disabled at
+// "Loading model…" and the page looks broken.
+try {
+  await tracker.initialize();
+  toggleButton.disabled = false;
+  toggleButton.textContent = 'Start camera';
+  status.textContent = 'ready';
+} catch (error) {
+  toggleButton.textContent = 'Model failed to load';
+  status.textContent = error.message;
+}
