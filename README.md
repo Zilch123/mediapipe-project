@@ -24,6 +24,8 @@ Then open http://localhost:8000, pick a project, and click **Start camera**.
   through the "He's a Pirate" melody. The left hand is drawn but unused.
 - [apps/theremin/](apps/theremin/) — free-play theremin: right hand slides the
   pitch, left hand rides the volume, tone sustains continuously.
+- [apps/painting/](apps/painting/) — paint with one extended fingertip, a
+  colour per finger and a stroke-width slider.
 
 ## Building a new app on this
 

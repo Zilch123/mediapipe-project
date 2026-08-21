@@ -49,8 +49,12 @@ const MELODY = [
   ['A4', 3],
 ];
 
-// Deliberately low: any real movement counts, no bowing technique required.
-const MOVE_THRESHOLD = 0.04; // normalized screen widths per second
+// Movement is measured as net displacement over a short window, in units of
+// the player's own hand length. Measuring net travel (not per-frame deltas)
+// rejects landmark jitter, which wobbles back and forth but goes nowhere.
+// Scaling by hand length keeps it honest whether you sit near or far.
+const WINDOW_MS = 160;
+const MOVE_THRESHOLD = 0.9; // hand-lengths per second
 const RESET_AFTER = 2500; // ms of stillness before the melody starts over
 const MAX_GAIN = 0.22;
 
@@ -79,8 +83,7 @@ let melodyIndex = 0;
 let nextNoteAt = 0;
 let lastMovedAt = 0;
 let bowSpeed = 0;
-let lastBow = null;
-let lastBowTime = 0;
+let history = []; // recent bow-hand positions, newest last
 
 // --- audio ---------------------------------------------------------------
 
@@ -93,7 +96,11 @@ function startAudio() {
 function stopAudio() {
   audioCtx?.close();
   audioCtx = null;
+  // Drop the note handle with the context it belonged to.
+  activeNote = null;
 }
+
+let activeNote = null;
 
 /** One bowed note with its own envelope, so notes are distinct. */
 function playNote(freq, seconds) {
@@ -117,6 +124,19 @@ function playNote(freq, seconds) {
   osc.connect(filter).connect(gain).connect(audioCtx.destination);
   osc.start(t);
   osc.stop(t + seconds + 0.5);
+
+  stopActiveNote();
+  activeNote = { osc, gain };
+}
+
+/** Lift the bow: the sounding note stops instead of ringing on. */
+function stopActiveNote() {
+  if (!activeNote) return;
+  const t = audioCtx.currentTime;
+  activeNote.gain.gain.cancelScheduledValues(t);
+  activeNote.gain.gain.setTargetAtTime(0, t, 0.04);
+  activeNote.osc.stop(t + 0.2);
+  activeNote = null;
 }
 
 // --- detection -----------------------------------------------------------
@@ -134,22 +154,25 @@ function handleResults(result) {
 
   if (bowHand) {
     const wrist = bowHand[0];
-    if (lastBow) {
-      const dt = (now - lastBowTime) / 1000;
-      if (dt > 0) {
-        const moved = Math.hypot(wrist.x - lastBow.x, wrist.y - lastBow.y);
-        // Smooth so a single jittery frame doesn't count as movement.
-        bowSpeed = bowSpeed * 0.6 + (moved / dt) * 0.4;
-      }
-    }
-    lastBow = { x: wrist.x, y: wrist.y };
-    lastBowTime = now;
+    history.push({ x: wrist.x, y: wrist.y, t: now });
+    while (history.length > 1 && now - history[0].t > WINDOW_MS) history.shift();
+
+    const oldest = history[0];
+    const elapsed = (now - oldest.t) / 1000;
+    // Hand length (wrist to middle-finger knuckle) is the yardstick, so the
+    // threshold means the same thing near or far from the camera.
+    const handLength = Math.hypot(bowHand[9].x - wrist.x, bowHand[9].y - wrist.y);
+    bowSpeed =
+      elapsed > 0 && handLength > 0
+        ? Math.hypot(wrist.x - oldest.x, wrist.y - oldest.y) / handLength / elapsed
+        : 0;
   } else {
-    lastBow = null;
+    history = [];
     bowSpeed = 0;
   }
 
   const moving = bowSpeed > MOVE_THRESHOLD;
+  if (!moving) stopActiveNote();
 
   // Long pause: start the tune again from the top.
   if (!moving && lastMovedAt && now - lastMovedAt > RESET_AFTER) {
@@ -172,7 +195,9 @@ function handleResults(result) {
 
   draw(bowHand, otherHand, moving);
 
-  bowLevel.style.width = `${Math.round(Math.min(1, bowSpeed / 0.8) * 100)}%`;
+  // Full meter at twice the threshold, so you can see how much headroom the
+  // movement has over the point where it starts playing.
+  bowLevel.style.width = `${Math.round(Math.min(1, bowSpeed / (MOVE_THRESHOLD * 2)) * 100)}%`;
   handsLabel.textContent = `bow ${bowHand ? '✓' : '✗'} other ${otherHand ? '✓' : '✗'}`;
 }
 
